@@ -317,6 +317,7 @@ $(function () {
   }
 
   // Update order status in users object
+  // to do: eliminate duplicate code with continue order progress function
   function updateOrderStatusInStorage(orderId, statusData) {
     const users = getCurrentUserData();
     const orders = users[currentUser.email].orders;
@@ -328,6 +329,7 @@ $(function () {
   }
 
   // Save reviews to users object in localStorage
+  // Use to render the progress bar status on page load
   function saveReviewsToStorage() {
     const users = getCurrentUserData();
     users[currentUser.email].reviews = reviewsByOrder;
@@ -343,6 +345,7 @@ $(function () {
   }
 
   // Restore order DOM element from saved data
+  // to do: eliminate duplicate code with place order function
   function restoreOrderDOM(orderData) {
     // Generate user location if it doesn't exist (for old orders)
     if (!orderData.userLocation) {
@@ -429,12 +432,14 @@ $(function () {
     // Add order card to DOM
     $("#orders-history").prepend(orderDiv);
 
+    // to do: eliminate duplicate code with place order function
     // Continue progress simulation if order is not completed
     if (orderData.status.step < 3) {
       continueOrderProgress(orderData.orderId, orderData.status.step);
     }
   }
 
+  // to do: eliminate duplicate code with continue order progress function
   // Continue order progress simulation for incomplete orders
   function continueOrderProgress(orderId, currentStep) {
     const statuses = [
@@ -609,6 +614,8 @@ $(function () {
     // Bind delete button event
     selectedServicesTable
       .find(".delete-service")
+      // to do: what does this off do?
+      // to do: delete 后再点击place order不报空订单错了
       .off("click")
       .on("click", function () {
         $(this).closest("tr").remove();
@@ -678,6 +685,7 @@ $(function () {
   /* ------------------------------
      VALIDATE DATE INPUT
   ------------------------------ */
+  // to do: user还是可以手动输入无效日期
   function validateAllDates() {
     let valid = true;
 
@@ -779,8 +787,10 @@ $(function () {
     `);
 
     $("#orders-history").prepend(orderDiv);
+    // to do: useless
     refreshOrderIdCombo();
 
+    // to do: duplicate code with load orders function
     $("#orders-history .order-card").each(function (i) {
       $(this).toggleClass("hidden-order", i >= 5);
     });
@@ -793,6 +803,7 @@ $(function () {
       orderId: orderId,
       items: orderItems,
       total: $("#grand-total").text(),
+      // to do: 在删除progressbar后是否可以删除这里
       status: {
         step: 0,
         percent: 0,
@@ -867,6 +878,7 @@ $(function () {
   /* ------------------------------
      REFRESH ORDER ID DROPDOWN
   ------------------------------ */
+  // to do: we don't use this anymore
   function refreshOrderIdCombo() {
     $("#orderIdCombo").empty();
     $("#orders-history .order-card").each(function () {
