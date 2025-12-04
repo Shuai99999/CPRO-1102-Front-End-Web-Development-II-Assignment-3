@@ -14,9 +14,12 @@
       // Dynamically load Google Maps API using key from config file
       (function () {
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,directions`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&loading=async&libraries=places`;
         script.async = true;
         script.defer = true;
+        script.onerror = function () {
+          console.error("Failed to load Google Maps API");
+        };
         document.head.appendChild(script);
       })();
     </script>
@@ -103,6 +106,7 @@
             type="text"
             id="dog-walking-date"
             placeholder="Choose a date"
+            readonly
           />
         </div>
 
@@ -130,6 +134,7 @@
             type="text"
             id="pet-grooming-date"
             placeholder="Choose a date"
+            readonly
           />
         </div>
 
@@ -153,7 +158,12 @@
           />
           <p>Price: $<span id="veterinary-price"></span></p>
           <label for="veterinary-date">Select Date:</label>
-          <input type="text" id="veterinary-date" placeholder="Choose a date" />
+          <input
+            type="text"
+            id="veterinary-date"
+            placeholder="Choose a date"
+            readonly
+          />
         </div>
       </div>
     </section>

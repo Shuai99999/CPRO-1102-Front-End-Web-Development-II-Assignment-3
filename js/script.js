@@ -247,8 +247,66 @@ $(function () {
   });
 
   /* ------------------------------
-     ORDER STORAGE FUNCTIONS (Save to users object)
+      JQUERY UI 
   ------------------------------ */
+  // Initialize tabs
+  $("#tabs").tabs();
+
+  // Initialize reviews object
+  let reviewsByOrder = {};
+
+  // Load reviews from localStorage
+  loadReviewsFromStorage();
+
+  // Load and restore orders from localStorage
+  const savedOrders = loadOrdersFromStorage();
+  if (savedOrders.length > 0) {
+    // Sort orders by creation time (newest first)
+    savedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Restore each order to DOM
+    savedOrders.forEach(function (orderData) {
+      restoreOrderDOM(orderData);
+    });
+
+    // Limit display to first 5 orders
+    $("#orders-history .order-card").each(function (i) {
+      $(this).toggleClass("hidden-order", i >= 5);
+    });
+  }
+
+  // TESTIMONIAL SLIDESHOW
+  let testimonials = $("#testimonials .testimonial");
+  let tIndex = 0;
+  setInterval(function () {
+    $(testimonials[tIndex]).fadeOut(800, function () {
+      tIndex = (tIndex + 1) % testimonials.length;
+      $(testimonials[tIndex]).fadeIn(800);
+    });
+  }, 4000);
+
+  //  ACCORDION
+  $("#pricing-accordion").accordion({
+    collapsible: true,
+    heightStyle: "content",
+  });
+
+  //  PRICE TABLES
+  const dogWalkingPrices = { 30: 15, 60: 30, 90: 45, 120: 60 };
+  const groomingPrices = { basic: 40, full: 60, deluxe: 80 };
+  const veterinaryPrices = { checkup: 60, vaccination: 80, surgery: 150 };
+
+  //  DATEPICKER (with min/max)
+  $("#dog-walking-date, #pet-grooming-date, #veterinary-date").datepicker({
+    minDate: 0,
+    maxDate: "+30D",
+    dateFormat: "yy-mm-dd",
+  });
+
+  //  CONTACT DIALOG
+  $("#contact-btn").click(function () {
+    $("#contactInfo").dialog();
+  });
 
   /* ------------------------------
      UTILITY FUNCTIONS
@@ -316,18 +374,6 @@ $(function () {
     return users[currentUser.email].orders || [];
   }
 
-  // Update order status in users object
-  // to do: eliminate duplicate code with continue order progress function
-  function updateOrderStatusInStorage(orderId, statusData) {
-    const users = getCurrentUserData();
-    const orders = users[currentUser.email].orders;
-    const orderIndex = orders.findIndex((o) => o.orderId === orderId);
-    if (orderIndex !== -1) {
-      orders[orderIndex].status = statusData;
-      saveUserData(users);
-    }
-  }
-
   // Save reviews to users object in localStorage
   // Use to render the progress bar status on page load
   function saveReviewsToStorage() {
@@ -345,8 +391,17 @@ $(function () {
   }
 
   // Restore order DOM element from saved data
-  // to do: eliminate duplicate code with place order function
   function restoreOrderDOM(orderData) {
+    // Initialize status object if it doesn't exist (for old orders)
+    if (!orderData.status) {
+      orderData.status = {
+        step: 3,
+        percent: 100,
+        color: "#32CD32",
+        text: "Completed",
+      };
+    }
+
     // Generate user location if it doesn't exist (for old orders)
     if (!orderData.userLocation) {
       orderData.userLocation = generateRandomAlbertaCoordinates();
@@ -358,6 +413,7 @@ $(function () {
       );
       if (orderIndex !== -1) {
         orders[orderIndex].userLocation = orderData.userLocation;
+        orders[orderIndex].status = orderData.status;
         saveUserData(users);
       }
     }
@@ -431,134 +487,7 @@ $(function () {
 
     // Add order card to DOM
     $("#orders-history").prepend(orderDiv);
-
-    // to do: eliminate duplicate code with place order function
-    // Continue progress simulation if order is not completed
-    if (orderData.status.step < 3) {
-      continueOrderProgress(orderData.orderId, orderData.status.step);
-    }
   }
-
-  // to do: eliminate duplicate code with continue order progress function
-  // Continue order progress simulation for incomplete orders
-  function continueOrderProgress(orderId, currentStep) {
-    const statuses = [
-      { text: "Pending", color: "#1E90FF" },
-      { text: "Confirm", color: "#00CED1" },
-      { text: "In Service", color: "#006effff" },
-      { text: "Completed", color: "#32CD32" },
-    ];
-
-    const orderDiv = $("#" + orderId);
-    const bar = orderDiv.find(".progress-bar");
-    const label = orderDiv.find(".progress-text");
-
-    let step = currentStep;
-
-    // Update progress bar at intervals
-    const interval = setInterval(() => {
-      step++;
-
-      // Order completed
-      if (step >= statuses.length) {
-        clearInterval(interval);
-        bar.css("width", "100%");
-        label.text("Completed");
-        bar.css("background", statuses[3].color);
-        orderDiv.find(".review-btn").show();
-
-        // Update status in users object
-        updateOrderStatusInStorage(orderId, {
-          step: 3,
-          percent: 100,
-          color: statuses[3].color,
-          text: "Completed",
-        });
-        return;
-      }
-
-      // Update progress bar
-      const percent = (step / (statuses.length - 1)) * 100;
-      bar.css("width", percent + "%");
-      bar.css("background", statuses[step].color);
-      label.text(statuses[step].text);
-
-      // Update status in users object
-      updateOrderStatusInStorage(orderId, {
-        step: step,
-        percent: percent,
-        color: statuses[step].color,
-        text: statuses[step].text,
-      });
-    }, 1000);
-  }
-
-  /* ------------------------------
-      Service tabs INITIALIZATION
-  ------------------------------ */
-  $("#tabs").tabs();
-
-  // Initialize reviews object
-  let reviewsByOrder = {};
-
-  // Load reviews from localStorage
-  loadReviewsFromStorage();
-
-  // Load and restore orders from localStorage
-  const savedOrders = loadOrdersFromStorage();
-  if (savedOrders.length > 0) {
-    // Sort orders by creation time (newest first)
-    savedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    // Restore each order to DOM
-    savedOrders.forEach(function (orderData) {
-      restoreOrderDOM(orderData);
-    });
-
-    // Refresh order ID dropdown
-    refreshOrderIdCombo();
-
-    // Limit display to first 5 orders
-    $("#orders-history .order-card").each(function (i) {
-      $(this).toggleClass("hidden-order", i >= 5);
-    });
-  }
-
-  /* ------------------------------
-     TESTIMONIAL SLIDESHOW
-  ------------------------------ */
-  let testimonials = $("#testimonials .testimonial");
-  let tIndex = 0;
-  setInterval(function () {
-    $(testimonials[tIndex]).fadeOut(800, function () {
-      tIndex = (tIndex + 1) % testimonials.length;
-      $(testimonials[tIndex]).fadeIn(800);
-    });
-  }, 4000);
-
-  /* ------------------------------
-     ACCORDION
-  ------------------------------ */
-  $("#pricing-accordion").accordion({
-    collapsible: true,
-    heightStyle: "content",
-  });
-
-  /* ------------------------------
-     PRICE TABLES
-  ------------------------------ */
-  const dogWalkingPrices = { 30: 15, 60: 30, 90: 45, 120: 60 };
-  const groomingPrices = { basic: 40, full: 60, deluxe: 80 };
-  const veterinaryPrices = { checkup: 60, vaccination: 80, surgery: 150 };
-
-  /* ------------------------------
-     DATEPICKER (with min/max)
-  ------------------------------ */
-  $("#dog-walking-date, #pet-grooming-date, #veterinary-date").datepicker({
-    minDate: 0,
-    maxDate: "+30D",
-    dateFormat: "yy-mm-dd",
-  });
 
   /* ------------------------------
      GRAND TOTAL CALCULATION
@@ -594,6 +523,7 @@ $(function () {
 
     // Update selected services table
     let selectedServicesTable = $("#services-table tbody");
+    // Remove existing row for this service, otherwise it will duplicate rows when user changes options
     selectedServicesTable.find(`tr[data-service="${serviceName}"]`).remove();
 
     // Add new row if all fields are valid
@@ -612,15 +542,10 @@ $(function () {
     }
 
     // Bind delete button event
-    selectedServicesTable
-      .find(".delete-service")
-      // to do: what does this off do?
-      // to do: delete 后再点击place order不报空订单错了
-      .off("click")
-      .on("click", function () {
-        $(this).closest("tr").remove();
-        recalculateGrandTotal();
-      });
+    selectedServicesTable.find(".delete-service").on("click", function () {
+      $(this).closest("tr").remove();
+      recalculateGrandTotal();
+    });
 
     recalculateGrandTotal();
   }
@@ -712,6 +637,7 @@ $(function () {
   $("#place-order").click(function () {
     const selectedServicesTable = $("#services-table tbody");
 
+    console.log(selectedServicesTable.find("tr"));
     // Check if at least one service is selected
     if (selectedServicesTable.find("tr").length === 0) {
       alert("Please select at least one service.");
@@ -787,10 +713,8 @@ $(function () {
     `);
 
     $("#orders-history").prepend(orderDiv);
-    // to do: useless
-    refreshOrderIdCombo();
 
-    // to do: duplicate code with load orders function
+    // make sense when user place order
     $("#orders-history .order-card").each(function (i) {
       $(this).toggleClass("hidden-order", i >= 5);
     });
@@ -803,13 +727,6 @@ $(function () {
       orderId: orderId,
       items: orderItems,
       total: $("#grand-total").text(),
-      // to do: 在删除progressbar后是否可以删除这里
-      status: {
-        step: 0,
-        percent: 0,
-        color: "#1E90FF",
-        text: "Pending",
-      },
       // Store user location coordinates for navigation
       userLocation: userLocation,
       createdAt: new Date().toISOString(),
@@ -849,13 +766,6 @@ $(function () {
         bar.css("background", statuses[3].color);
         orderDiv.find(".review-btn").show();
 
-        // Update order status in users object
-        updateOrderStatusInStorage(orderId, {
-          step: 3,
-          percent: 100,
-          color: statuses[3].color,
-          text: "Completed",
-        });
         return;
       }
 
@@ -864,35 +774,7 @@ $(function () {
       bar.css("width", percent + "%");
       bar.css("background", statuses[step].color);
       label.text(statuses[step].text);
-
-      // Update order status in users object
-      updateOrderStatusInStorage(orderId, {
-        step: step,
-        percent: percent,
-        color: statuses[step].color,
-        text: statuses[step].text,
-      });
     }, 1000);
-  });
-
-  /* ------------------------------
-     REFRESH ORDER ID DROPDOWN
-  ------------------------------ */
-  // to do: we don't use this anymore
-  function refreshOrderIdCombo() {
-    $("#orderIdCombo").empty();
-    $("#orders-history .order-card").each(function () {
-      $("#orderIdCombo").append(
-        `<option value="${$(this).attr("id")}">${$(this).attr("id")}</option>`
-      );
-    });
-  }
-
-  /* ------------------------------
-     CONTACT DIALOG
-  ------------------------------ */
-  $("#contact-btn").click(function () {
-    $("#contactInfo").dialog();
   });
 
   /* ------------------------------
